@@ -33,6 +33,10 @@ export default async function handler(req, res) {
     else if (typeof v === 'string' && v.trim()) record.answers[k] = v.slice(0, 4000);
   }
 
+  const blank = Object.keys(record.answers).length === 0 &&
+                !Object.values(record.meta).some(v => v);
+  if (blank) return res.status(200).json({ ok: true, skipped: '빈 내용은 저장하지 않습니다' });
+
   const json = JSON.stringify(record);
   if (json.length > MAX) return res.status(413).json({ error: '내용이 너무 깁니다' });
 

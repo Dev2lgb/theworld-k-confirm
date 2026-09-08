@@ -93,6 +93,9 @@ async function syncNow(manual){
   const payload = JSON.stringify(d);
   const cmp = JSON.stringify({m:d.meta, a:d.answers});
   if (!manual && cmp === lastSent) return;
+  /* 아무것도 안 적힌 상태는 서버에 올리지 않는다 (목록이 지저분해진다) */
+  const blank = !Object.keys(d.answers).length && !Object.values(d.meta).some(v => v);
+  if (blank && !lastSent) return;
   if (inflight){ dirty = true; return; }
   inflight = true;
   setSync('saving', '저장 중');
@@ -194,7 +197,8 @@ if (VIEW) {
     localSave();
     try {
       const d = collect();
-      if (JSON.stringify({m:d.meta, a:d.answers}) !== lastSent)
+      const blank = !Object.keys(d.answers).length && !Object.values(d.meta).some(v => v);
+      if (!blank && JSON.stringify({m:d.meta, a:d.answers}) !== lastSent)
         navigator.sendBeacon('/api/save', new Blob([JSON.stringify(d)], {type:'application/json'}));
     } catch(e){}
   });

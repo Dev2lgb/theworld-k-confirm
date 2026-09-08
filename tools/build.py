@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """본문(body.html) + 틀(head/tail) -> 배포용 index.html"""
-import json, os, sys
+import json, os, re, sys
 
 S   = sys.argv[1]                       # 작업 디렉터리
 OUT = sys.argv[2]                       # 출력 파일
@@ -21,6 +21,30 @@ WEB = ('<p style="margin:0 0 9px;">네모 칸을 눌러 표시하시고, 빈칸�
        '전화로 말씀해 주셔도 됩니다.</p>')
 assert PAPER in body, '안내문을 찾지 못했습니다'
 body = body.replace(PAPER, WEB)
+
+# ── 본문 인라인 스타일: 폰트 교체 + 크기 1.2배 ──
+SCALE = 1.2
+
+def _n(v, unit):
+    x = round(float(v) * SCALE, 2)
+    x = int(x) if x == int(x) else x
+    return f'{x}{unit}'
+
+# 명조/IBM 지정을 공통 폰트 변수로
+body = body.replace("font-family:'Nanum Myeongjo',serif", 'font-family:var(--ff)')
+body = body.replace("font-family:'IBM Plex Sans KR',sans-serif", 'font-family:var(--ff)')
+
+# 글자 크기(pt)
+body = re.sub(r'font-size:([\d.]+)pt', lambda m: 'font-size:' + _n(m.group(1), 'pt'), body)
+
+# 여백(margin/padding/gap)의 px 값
+def _spacing(m):
+    prop, val = m.group(1), m.group(2)
+    return prop + ':' + re.sub(r'([\d.]+)px', lambda k: _n(k.group(1), 'px'), val)
+body = re.sub(r'(margin[a-z-]*|padding[a-z-]*|gap):([^;"]*)', _spacing, body)
+
+# 표 빈 칸 높이
+body = re.sub(r'height:26px', 'height:' + _n('26', 'px'), body)
 
 slim = [{k: f[k] for k in ('id','ch','chTitle','q','qTitle','type','label')} for f in fields]
 tail = tail.replace('__FIELDS__', json.dumps(slim, ensure_ascii=False, separators=(',', ':')))

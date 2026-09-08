@@ -3,3 +3,5 @@
 *:Zone.Identifier
 node_modules/
 .vercel/
+.vercel
+.env*
