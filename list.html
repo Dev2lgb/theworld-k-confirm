@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>확인 요청서 — 받은 답변</title>
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%238a3f2b'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{--accent:oklch(0.45 0.10 35);--accent-soft:oklch(0.973 0.010 55);--ink:oklch(0.26 0.008 60);
+  --muted:oklch(0.50 0.012 60);--line:oklch(0.87 0.008 60);--paper:#fdfcfa;--bg:oklch(0.955 0.008 60)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:10.4pt;line-height:1.72;letter-spacing:-.01em;
+  font-family:'IBM Plex Sans KR',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:40px 22px 70px}
+.head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+h1{font-family:'Nanum Myeongjo',serif;font-weight:800;font-size:19pt;letter-spacing:-.03em;margin:0}
+.sub{color:var(--muted);font-size:9.5pt;margin:0 0 26px}
+.btn{font:inherit;font-size:9pt;font-weight:500;padding:6px 13px;border-radius:6px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);text-decoration:none;display:inline-block;cursor:pointer}
+.btn:hover{background:var(--accent-soft);border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.card{display:block;text-decoration:none;color:inherit;background:var(--paper);border:1px solid var(--line);
+  border-radius:4px;padding:16px 20px;margin-bottom:11px;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(80,50,35,.08)}
+.row1{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.nm{font-family:'Nanum Myeongjo',serif;font-weight:700;font-size:12.4pt;letter-spacing:-.02em}
+.og{color:var(--muted);font-size:9.3pt}
+.tm{margin-left:auto;color:var(--muted);font-size:8.7pt;white-space:nowrap}
+.pr{display:flex;align-items:center;gap:10px;font-size:8.8pt;color:var(--muted)}
+.tk{flex:1;max-width:230px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.fl{height:100%;background:var(--accent)}
+.badge{font-size:8.4pt;padding:2px 8px;border-radius:20px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.empty{background:var(--paper);border:1px dashed var(--line);border-radius:4px;padding:44px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;font-family:'Nanum Myeongjo',serif;font-size:12.5pt;font-weight:700;color:var(--ink);margin-bottom:8px}
+.err{background:oklch(0.97 0.03 30);border:1px solid oklch(0.80 0.09 30);color:oklch(0.42 0.14 30);
+  padding:14px 18px;border-radius:4px;font-size:9.4pt}
+@media(max-width:600px){.wrap{padding:26px 14px 50px}h1{font-size:16pt}.tm{margin-left:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>받은 답변</h1>
+    <a class="btn primary" href="./" style="margin-left:auto">요청서 열기</a>
+    <button class="btn" onclick="load()">새로 고침</button>
+  </div>
+  <p class="sub">사단법인 더월드 — K-자격 수강신청 관리 시스템 확인 요청서</p>
+  <div id="out"><div class="empty">불러오는 중…</div></div>
+</div>
+<script>
+const out = document.getElementById('out');
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function load(){
+  out.innerHTML = '<div class="empty">불러오는 중…</div>';
+  try{
+    const r = await fetch('/api/list', {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const { rows } = await r.json();
+    if(!rows.length){
+      out.innerHTML = '<div class="empty"><b>아직 받은 답변이 없습니다</b>' +
+        '클라이언트가 요청서를 열어 적기 시작하면 여기에 바로 나타납니다.<br>' +
+        '적는 도중에도 자동으로 저장되니, 중간 내용도 보실 수 있습니다.</div>';
+      return;
+    }
+    out.innerHTML = rows.map(x => {
+      const pct = x.total ? Math.round(x.done / x.total * 100) : 0;
+      const nm = x.meta._name || '이름 미기재';
+      const og = x.meta._org || '';
+      const tel = x.meta._tel ? ' · ' + esc(x.meta._tel) : '';
+      const when = x.savedAt ? new Date(x.savedAt).toLocaleString('ko-KR') : '';
+      return '<a class="card" href="./?id=' + encodeURIComponent(x.id) + '">' +
+        '<div class="row1"><span class="nm">' + esc(nm) + '</span>' +
+        '<span class="og">' + esc(og) + tel + '</span>' +
+        (pct === 100 ? '<span class="badge">모두 응답</span>' : '') +
+        '<span class="tm">' + esc(when) + '</span></div>' +
+        '<div class="pr"><div class="tk"><div class="fl" style="width:' + pct + '%"></div></div>' +
+        '<span>' + x.done + ' / ' + x.total + ' 문항</span></div></a>';
+    }).join('');
+  }catch(e){
+    out.innerHTML = '<div class="err">목록을 불러오지 못했습니다. ' + esc(e.message) + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

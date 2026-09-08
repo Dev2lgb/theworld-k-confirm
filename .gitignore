@@ -2,3 +2,4 @@
 *(standalone).html
 *:Zone.Identifier
 node_modules/
+.vercel/

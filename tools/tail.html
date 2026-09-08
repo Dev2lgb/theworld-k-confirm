@@ -1,0 +1,206 @@
+</div>
+
+<div class="end no-print" id="endbox">
+  <h4>다 적으셨으면</h4>
+  <p>적으시는 대로 자동으로 저장됩니다. 중간에 창을 닫으셨다가 이어서 하셔도 됩니다.<br>
+     다 하신 뒤 따로 보내실 것은 없습니다. 저희가 화면에서 바로 확인합니다.</p>
+  <div class="end-btns">
+    <button class="btn" onclick="window.print()">인쇄 / PDF로 저장</button>
+    <button class="btn primary" onclick="syncNow(true)">지금 저장</button>
+  </div>
+</div>
+
+<script>
+const FIELDS = __FIELDS__;
+const KEY = 'kjagyeok-confirm-v2';
+const IDKEY = 'kjagyeok-id-v2';
+const META = ['_name','_org','_tel'];
+const byQ = {};
+FIELDS.forEach(f => { (byQ[f.q] = byQ[f.q] || []).push(f); });
+
+const params = new URLSearchParams(location.search);
+const VIEW = params.get('id');          /* 보기 전용 모드 */
+
+/* ── 내 문서 번호 ── */
+function myId(){
+  let v = null;
+  try { v = localStorage.getItem(IDKEY); } catch(e){}
+  if (!v) {
+    v = (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
+    try { localStorage.setItem(IDKEY, v); } catch(e){}
+  }
+  return v;
+}
+
+/* ── 상태 읽고 쓰기 ── */
+function collect(){
+  const d = { id: VIEW || myId(), meta:{}, answers:{}, savedAt:new Date().toISOString() };
+  META.forEach(k => { const e=document.getElementById(k); if(e) d.meta[k]=e.value.trim(); });
+  FIELDS.forEach(f => {
+    const e = document.getElementById(f.id); if(!e) return;
+    const v = f.type==='check' ? e.checked : e.value;
+    if (v === true || (typeof v==='string' && v.trim())) d.answers[f.id] = v;
+  });
+  d.done = Object.keys(byQ).filter(answered).length;
+  d.total = Object.keys(byQ).length;
+  return d;
+}
+function apply(d){
+  if(!d) return;
+  META.forEach(k => { const e=document.getElementById(k); if(e && d.meta && d.meta[k]!=null) e.value=d.meta[k]; });
+  FIELDS.forEach(f => {
+    const e = document.getElementById(f.id); if(!e) return;
+    const v = d.answers ? d.answers[f.id] : undefined;
+    if (f.type==='check') e.checked = v===true;
+    else e.value = (typeof v==='string') ? v : '';
+  });
+  refresh();
+}
+
+/* ── 진행률 ── */
+function answered(q){
+  return byQ[q].some(f => {
+    const e = document.getElementById(f.id); if(!e) return false;
+    return f.type==='check' ? e.checked : e.value.trim() !== '';
+  });
+}
+function refresh(){
+  const qs = Object.keys(byQ);
+  const n = qs.filter(answered).length;
+  document.getElementById('fill').style.width = (qs.length ? n/qs.length*100 : 0) + '%';
+  document.getElementById('ptext').textContent = n + ' / ' + qs.length + ' 문항';
+  document.querySelectorAll('[data-nav]').forEach(a => {
+    const ch = a.dataset.nav;
+    const cqs = qs.filter(q => byQ[q][0].ch === ch);
+    const cn = cqs.filter(answered).length;
+    a.querySelector('i').textContent = cn + '/' + cqs.length;
+    a.classList.toggle('done', cn > 0 && cn === cqs.length);
+  });
+  FIELDS.forEach(f => {
+    if (f.type==='check') return;
+    const e = document.getElementById(f.id); if(e) e.classList.toggle('has', e.value.trim()!=='');
+  });
+}
+
+/* ── 서버 저장 ── */
+const syncEl = document.getElementById('sync');
+function setSync(cls, msg){ syncEl.className = 'sync ' + cls; syncEl.textContent = msg; }
+let timer = null, inflight = false, dirty = false, lastSent = '';
+
+async function syncNow(manual){
+  if (VIEW) return;
+  const d = collect();
+  const payload = JSON.stringify(d);
+  const cmp = JSON.stringify({m:d.meta, a:d.answers});
+  if (!manual && cmp === lastSent) return;
+  if (inflight){ dirty = true; return; }
+  inflight = true;
+  setSync('saving', '저장 중');
+  try {
+    const r = await fetch('/api/save', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: payload });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    lastSent = cmp;
+    const t = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+    setSync('ok', '저장됨 ' + t);
+  } catch(e) {
+    setSync('err', '저장 실패 — 다시 시도합니다');
+    setTimeout(() => { dirty = true; schedule(600); }, 4000);
+  } finally {
+    inflight = false;
+    if (dirty){ dirty = false; schedule(400); }
+  }
+}
+function schedule(ms){
+  if (VIEW) return;
+  clearTimeout(timer);
+  timer = setTimeout(() => syncNow(false), ms == null ? 2500 : ms);
+}
+function localSave(){ try { localStorage.setItem(KEY, JSON.stringify(collect())); } catch(e){} }
+
+/* ── 장 이동 ── */
+(function(){
+  const nav = document.getElementById('nav');
+  const seen = [];
+  FIELDS.forEach(f => { if (f.ch && !seen.includes(f.ch)) seen.push(f.ch); });
+  seen.forEach(ch => {
+    const a = document.createElement('a');
+    a.href = '#ch-' + ch; a.dataset.nav = ch;
+    a.innerHTML = ch + '장 <i></i>';
+    nav.appendChild(a);
+  });
+})();
+
+/* ── 표 가로 스크롤 래핑 · 입력칸 안내 ── */
+(function(){
+  document.querySelectorAll('sc-raw-table').forEach(t => {
+    const w = document.createElement('div'); w.className = 'tbl-wrap';
+    t.parentNode.insertBefore(w, t); w.appendChild(t);
+    const heads = [...t.querySelectorAll('sc-raw-thead sc-raw-th')].map(h => h.textContent.trim());
+    t.querySelectorAll('sc-raw-tbody sc-raw-tr').forEach(tr => {
+      [...tr.children].forEach((td, i) => {
+        const inp = td.querySelector('.f-in');
+        if (inp && heads[i]) inp.placeholder = heads[i];
+      });
+    });
+  });
+})();
+
+/* ── 시작 ── */
+document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+if (VIEW) {
+  /* 보기 전용 */
+  document.body.classList.add('view');
+  document.getElementById('btn-save').remove();
+  document.getElementById('sync').remove();
+  document.getElementById('endbox').remove();
+  const vb = document.getElementById('viewbar');
+  vb.hidden = false; vb.textContent = '불러오는 중…';
+  document.querySelectorAll('input, textarea').forEach(e => {
+    e.disabled = true; e.readOnly = true;
+  });
+  fetch('/api/get?id=' + encodeURIComponent(VIEW))
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+    .then(d => {
+      if (d.empty) throw new Error('없음');
+      apply(d);
+      const who = [d.meta._name, d.meta._org].filter(Boolean).join(' · ') || '작성자 미기재';
+      const when = d.savedAt ? new Date(d.savedAt).toLocaleString('ko-KR') : '';
+      vb.innerHTML = '<b>' + who + '</b> 님이 적으신 답변입니다. ' + d.done + ' / ' + d.total +
+        ' 문항, 마지막 저장 ' + when + ' &nbsp;·&nbsp; <a href="./list.html">목록으로</a>';
+    })
+    .catch(() => { vb.innerHTML = '답변을 불러오지 못했습니다. &nbsp;·&nbsp; <a href="./list.html">목록으로</a>'; });
+} else {
+  /* 작성 모드 */
+  document.getElementById('btn-save').addEventListener('click', () => syncNow(true));
+  document.addEventListener('input', e => {
+    if(e.target.matches('.f-ta,.f-in,.who input')){ refresh(); localSave(); schedule(); }
+  });
+  document.addEventListener('change', e => {
+    if(e.target.matches('.f-cb')){ refresh(); localSave(); schedule(1200); }
+  });
+  /* 서버에 있는 내 답변을 먼저, 없으면 이 브라우저에 남은 것을 쓴다 */
+  fetch('/api/get?id=' + encodeURIComponent(myId()))
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (d && !d.empty && d.answers) { apply(d); lastSent = JSON.stringify({m:d.meta, a:d.answers});
+                            setSync('ok', '이어서 작성하실 수 있습니다'); }
+      else { try { const raw = localStorage.getItem(KEY); if(raw){ apply(JSON.parse(raw)); schedule(800); } } catch(e){} }
+    })
+    .catch(() => { try { const raw = localStorage.getItem(KEY); if(raw) apply(JSON.parse(raw)); } catch(e){} });
+
+  addEventListener('pagehide', () => {
+    localSave();
+    try {
+      const d = collect();
+      if (JSON.stringify({m:d.meta, a:d.answers}) !== lastSent)
+        navigator.sendBeacon('/api/save', new Blob([JSON.stringify(d)], {type:'application/json'}));
+    } catch(e){}
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) syncNow(false); });
+}
+refresh();
+</script>
+</body>
+</html>

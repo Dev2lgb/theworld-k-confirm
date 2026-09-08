@@ -1,0 +1,10 @@
+{
+  "name": "theworld-k-confirm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "K-자격 수강신청 관리 시스템 확인 요청서 — 입력 폼과 답변 보관",
+  "dependencies": {
+    "@vercel/blob": "^2.0.0"
+  }
+}
