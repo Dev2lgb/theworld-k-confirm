@@ -178,7 +178,7 @@ if (VIEW) {
   /* 작성 모드 */
   document.getElementById('btn-save').addEventListener('click', () => syncNow(true));
   document.addEventListener('input', e => {
-    if(e.target.matches('.f-ta,.f-in,.who input')){ refresh(); localSave(); schedule(); }
+    if(e.target.matches('.f-ta,.f-in,.f-bl,.f-ln,.who input')){ refresh(); localSave(); schedule(); }
   });
   document.addEventListener('change', e => {
     if(e.target.matches('.f-cb')){ refresh(); localSave(); schedule(1200); }

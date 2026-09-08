@@ -88,8 +88,40 @@ token_re = re.compile(
     r'|(?P<h3><h3)(?P<h3attr>[^>]*>)(?P<h3in>.*?)</h3>'
     r'|(?P<opt><span style="display:inline-flex;align-items:baseline;gap:7px">)'
     r'|(?P<wi><div style="break-inside:avoid;margin:12px 0 20px"><div style="font-size:9pt;letter-spacing:0\.02em;color:oklch\(0\.50 0\.012 60\);margin-bottom:8px">적어 주실 내용</div>)'
-    r'|(?P<td><sc-raw-td style="(?P<tdstyle>[^"]*height:26px)"></sc-raw-td>)',
+    r'|(?P<td><sc-raw-td style="(?P<tdstyle>[^"]*height:26px)"></sc-raw-td>)'
+    r'|(?P<bl><span style="display:inline-block;border-bottom:1px solid oklch\(0\.72 0\.01 60\);'
+    r'min-width:54px;height:0\.9em;vertical-align:-2px"></span>)'
+    r'|(?P<ln><span style="flex:1;border-bottom:1px solid oklch\(0\.87 0\.008 60\);height:1\.35em"></span>)',
     re.S)
+
+BLANK_RE = re.compile(
+    r'<span style="(?:display:inline-block;border-bottom:1px solid oklch\(0\.72 0\.01 60\)[^"]*'
+    r'|flex:1;border-bottom:1px solid oklch\(0\.87 0\.008 60\);height:1\.35em)"></span>')
+
+
+def blank_label(html, at):
+    """빈칸에 이름을 붙인다. 표 안이면 '줄 이름 — 칸 문구', 밖이면 바로 앞 항목 이름."""
+    td = html.rfind('<sc-raw-td', 0, at)
+    if td != -1 and html.find('</sc-raw-td>', td, at) == -1:
+        end = html.find('</sc-raw-td>', at)
+        cell = strip_tags(BLANK_RE.sub(' ○ ', html[html.find('>', td) + 1:end]))
+        first = ''
+        tr = html.rfind('<sc-raw-tr', 0, td)
+        if tr != -1:
+            m = re.search(r'<sc-raw-td[^>]*>(.*?)</sc-raw-td>', html[tr:], re.S)
+            if m:
+                first = strip_tags(BLANK_RE.sub(' ○ ', m.group(1)))
+        label = f'{first} — {cell}' if first and first != cell else cell
+        return re.sub(r'\s+', ' ', label).strip()[:70]
+
+    prev = html.rfind('</span>', 0, at)
+    lab = ''
+    if prev != -1:
+        st = html.rfind('<span', 0, prev)
+        if st != -1:
+            lab = strip_tags(html[st:prev])
+    return (re.sub(r'\s+', ' ', lab).strip() or '빈칸')[:70]
+
 
 def close_span(s, start):
     """start는 여는 <span ...> 의 '<' 위치. 짝이 맞는 </span> 끝 인덱스 반환."""
@@ -168,6 +200,24 @@ while True:
                    f'placeholder="자유롭게 적어 주십시오"></textarea></div>')
         i = j
 
+    elif mo.group('bl'):
+        fid = next_id('빈칸')
+        fields.append({'id': fid, 'ch': cur_ch['no'], 'chTitle': cur_ch['title'],
+                       'q': cur_q['no'], 'qTitle': cur_q['title'], 'type': 'blank',
+                       'label': blank_label(body, mo.start('bl'))})
+        res.append(f'<input type="text" class="f-bl" id="{fid}" inputmode="numeric" '
+                   f'aria-label="{htmlmod.escape(cur_q["no"])} 빈칸">')
+        i = mo.end()
+
+    elif mo.group('ln'):
+        fid = next_id('줄')
+        fields.append({'id': fid, 'ch': cur_ch['no'], 'chTitle': cur_ch['title'],
+                       'q': cur_q['no'], 'qTitle': cur_q['title'], 'type': 'line',
+                       'label': blank_label(body, mo.start('ln'))})
+        res.append(f'<input type="text" class="f-ln" id="{fid}" '
+                   f'placeholder="성함 · 직위 · 연락처">')
+        i = mo.end()
+
     elif mo.group('td'):
         fid = next_id('표')
         fields.append({'id': fid, 'ch': cur_ch['no'], 'chTitle': cur_ch['title'],
@@ -188,5 +238,7 @@ print("  본문 크기:", f"{len(body2):,} bytes")
 print("  남은 정적 체크박스:", body2.count('border-radius:1px;transform:translateY(2px)'))
 print("  남은 밑줄:", body2.count('height:27px'))
 print("  남은 빈 셀:", len(re.findall(r'<sc-raw-td style="[^"]*height:26px"></sc-raw-td>', body2)))
+print("  남은 인라인 빈칸:", len(re.findall(r'border-bottom:1px solid oklch\(0\.72 0\.01 60\)', body2))
+      + len(re.findall(r'flex:1;border-bottom:1px solid oklch\(0\.87 0\.008 60\);height:1\.35em', body2)))
 chs = sorted({f['ch'] for f in fields}, key=lambda x:(len(x),x))
 print("  장:", chs)

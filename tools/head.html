@@ -109,6 +109,22 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .f-ta:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px oklch(0.45 0.10 35/.11)}
 .f-ta.has{background:var(--accent-soft);border-color:oklch(0.75 0.04 40)}
 
+/* ── 문장 속 빈칸 ── */
+.f-bl{display:inline-block;width:72px;font:inherit;font-size:inherit;font-weight:600;
+  text-align:center;padding:0 5px 1px;margin:0 2px;border:0;border-radius:0;
+  border-bottom:1.6px solid oklch(0.70 0.02 40);background:transparent;color:var(--accent);
+  vertical-align:baseline;transition:background .13s,border-color .13s}
+.f-bl:focus{outline:none;border-bottom-color:var(--accent);background:var(--accent-soft)}
+.f-bl.has{background:var(--accent-soft)}
+.f-ln{flex:1;min-width:0;font:inherit;padding:2px 8px 3px;border:0;border-radius:0;
+  border-bottom:1.6px solid var(--line);background:transparent;color:var(--ink);
+  transition:background .13s,border-color .13s}
+.f-ln::placeholder{color:oklch(0.76 0.008 60)}
+.f-ln:focus{outline:none;border-bottom-color:var(--accent);background:var(--accent-soft)}
+.f-ln.has{background:var(--accent-soft);border-bottom-color:oklch(0.75 0.04 40);font-weight:500}
+body.view .f-bl:not(.has),body.view .f-ln:not(.has){border-bottom-style:dotted;opacity:.55}
+body.view .f-ln::placeholder{color:transparent}
+
 h2,h3{scroll-margin-top:120px}
 
 /* ── 표 ── */
