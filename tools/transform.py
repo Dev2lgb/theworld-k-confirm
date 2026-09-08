@@ -9,6 +9,51 @@ src = open(os.path.join(S, 'template.html'), encoding='utf-8').read()
 m = re.search(r'<doc-page[^>]*>(.*)</doc-page>', src, re.S)
 body = m.group(1)
 
+# ── 이번 회차에서 빼는 문항 ──
+# 번호만 적으면 그 문항 블록(제목·저희 생각·선택지·서술칸)이 통째로 빠지고,
+# 같은 장의 뒷 문항 번호가 앞으로 당겨집니다. 되살리려면 목록에서 지우십시오.
+DROP = {'1-1'}
+
+def drop_questions(html, drop):
+    """빼기로 한 문항 블록을 제거하고 같은 장의 번호를 다시 매긴다."""
+    if not drop:
+        return html
+    H3 = re.compile(r'<h3[^>]*>')
+    CH = re.compile(r'<div style="break-before:page;')
+    NUM = re.compile(r'(<span style="color:oklch\(0\.45 0\.10 35\);margin-right:9px">)([\d\-]+)\.(</span>)')
+
+    removed = []
+    while True:
+        cut = None
+        for m in H3.finditer(html):
+            head = html[m.start():m.start() + 400]
+            nm = NUM.search(head)
+            if nm and nm.group(2) in drop and nm.group(2) not in removed:
+                nxt = H3.search(html, m.end())
+                ch  = CH.search(html, m.end())
+                ends = [x.start() for x in (nxt, ch) if x]
+                cut = (m.start(), min(ends) if ends else len(html), nm.group(2))
+                break
+        if not cut:
+            break
+        removed.append(cut[2])
+        html = html[:cut[0]] + html[cut[1]:]
+
+    # 빠진 장의 번호를 다시 매긴다
+    chapters = {n.split('-')[0] for n in removed}
+    seq = {}
+    def renum(m):
+        ch = m.group(2).split('-')[0]
+        if ch not in chapters:
+            return m.group(0)
+        seq[ch] = seq.get(ch, 0) + 1
+        return f'{m.group(1)}{ch}-{seq[ch]}.{m.group(3)}'
+    html = NUM.sub(renum, html)
+    print('  뺀 문항:', ', '.join(removed) or '없음')
+    return html
+
+body = drop_questions(body, DROP)
+
 fields = []          # {id, ch, q, type, label}
 cur_ch = {'no': '', 'title': ''}
 cur_q  = {'no': '', 'title': ''}
