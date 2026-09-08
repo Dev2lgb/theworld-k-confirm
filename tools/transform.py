@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """K-자격 확인요청서: 정적 문서 -> 입력 가능한 웹 폼 변환기"""
 import re, os, sys, json, html as htmlmod
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from add_sections import add_sections
 
 S = sys.argv[1]
 src = open(os.path.join(S, 'template.html'), encoding='utf-8').read()
@@ -53,6 +55,7 @@ def drop_questions(html, drop):
     return html
 
 body = drop_questions(body, DROP)
+body = add_sections(body)   # 빠져 있던 내용 보충
 
 fields = []          # {id, ch, q, type, label}
 cur_ch = {'no': '', 'title': ''}
