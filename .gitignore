@@ -1,0 +1,4 @@
+# 원본 번들 파일 (폰트 임베드 15MB) — 배포본에는 불필요
+*(standalone).html
+*:Zone.Identifier
+node_modules/
