@@ -116,6 +116,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
   vertical-align:baseline;transition:background .13s,border-color .13s}
 .f-bl:focus{outline:none;border-bottom-color:var(--accent);background:var(--accent-soft)}
 .f-bl.has{background:var(--accent-soft)}
+.opt-t .f-bl{cursor:text;width:66px;margin:0 3px}
+.opt input:checked~.opt-t .f-bl{border-bottom-color:var(--accent)}
 .f-ln{flex:1;min-width:0;font:inherit;padding:2px 8px 3px;border:0;border-radius:0;
   border-bottom:1.6px solid var(--line);background:transparent;color:var(--ink);
   transition:background .13s,border-color .13s}

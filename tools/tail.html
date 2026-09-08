@@ -178,7 +178,14 @@ if (VIEW) {
   /* 작성 모드 */
   document.getElementById('btn-save').addEventListener('click', () => syncNow(true));
   document.addEventListener('input', e => {
-    if(e.target.matches('.f-ta,.f-in,.f-bl,.f-ln,.who input')){ refresh(); localSave(); schedule(); }
+    if(!e.target.matches('.f-ta,.f-in,.f-bl,.f-ln,.who input')) return;
+    /* 선택지 안 빈칸에 값을 넣으면 그 선택지를 켜 준다 */
+    const opt = e.target.dataset && e.target.dataset.opt;
+    if (opt && e.target.value.trim()){
+      const cb = document.getElementById(opt);
+      if (cb && !cb.checked) cb.checked = true;
+    }
+    refresh(); localSave(); schedule();
   });
   document.addEventListener('change', e => {
     if(e.target.matches('.f-cb')){ refresh(); localSave(); schedule(1200); }

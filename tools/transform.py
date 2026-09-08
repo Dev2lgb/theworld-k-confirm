@@ -174,12 +174,28 @@ while True:
         s0 = mo.start('opt')
         ce, cend = close_span(body, s0)
         block = body[s0:cend]
-        label = strip_tags(re.sub(r'^.*?border-radius:1px;transform:translateY\(2px\)"></span>', '', block, flags=re.S))
+        inner = re.sub(r'^.*?border-radius:1px;transform:translateY\(2px\)"></span>', '', block, flags=re.S)
+        # 선택지 글 안에 밑줄 빈칸이 있으면 자리를 표시해 두고 입력칸으로 되살린다
+        marked = BLANK_RE.sub('\x00', inner)
+        text = strip_tags(marked)
+        label = text.replace('\x00', ' ○ ').strip()
+        label = re.sub(r'\s+', ' ', label)
         fid = next_id('선택')
         fields.append({'id': fid, 'ch': cur_ch['no'], 'chTitle': cur_ch['title'],
                        'q': cur_q['no'], 'qTitle': cur_q['title'], 'type': 'check', 'label': label})
+
+        parts = text.split('\x00')
+        html = htmlmod.escape(parts[0])
+        for tail in parts[1:]:
+            bid = next_id('빈칸')
+            fields.append({'id': bid, 'ch': cur_ch['no'], 'chTitle': cur_ch['title'],
+                           'q': cur_q['no'], 'qTitle': cur_q['title'], 'type': 'blank',
+                           'label': label, 'inOpt': fid})
+            html += (f'<input type="text" class="f-bl" id="{bid}" inputmode="numeric" '
+                     f'data-opt="{fid}" aria-label="{htmlmod.escape(label)}">'
+                     + htmlmod.escape(tail))
         res.append(f'<label class="opt"><input type="checkbox" class="f-cb" id="{fid}">'
-                   f'<span class="opt-t">{label}</span></label>')
+                   f'<span class="opt-t">{html}</span></label>')
         i = cend
 
     elif mo.group('wi'):
